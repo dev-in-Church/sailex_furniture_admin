@@ -1,51 +1,57 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Eye, EyeOff, Loader2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { adminLogin } from "@/lib/api"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { adminLogin } from "@/lib/api";
 
 export default function AdminLoginPage() {
-  const router = useRouter()
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [showPassword, setShowPassword] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState("")
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError("")
+    e.preventDefault();
+    setLoading(true);
+    setError("");
 
     try {
-      const response = await adminLogin(email, password)
-      
+      const response = await adminLogin(email, password);
+
       if (response.user.role !== "admin") {
-        setError("Access denied. Admin privileges required.")
-        setLoading(false)
-        return
+        setError("Access denied. Admin privileges required.");
+        setLoading(false);
+        return;
       }
 
-      localStorage.setItem("adminToken", response.token)
-      localStorage.setItem("adminUser", JSON.stringify(response.user))
-      router.push("/")
+      localStorage.setItem("adminToken", response.token);
+      localStorage.setItem("adminUser", JSON.stringify(response.user));
+      router.push("/");
     } catch (err: any) {
-      setError(err.message || "Invalid credentials")
+      setError(err.message || "Invalid credentials");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/30 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 w-20 h-20 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-3xl font-bold text-primary-foreground">S</span>
+            <img src="/logo.png" alt="" />
           </div>
           <CardTitle className="text-2xl font-serif">Admin Login</CardTitle>
           <CardDescription>
@@ -61,7 +67,9 @@ export default function AdminLoginPage() {
             )}
 
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium">Email</label>
+              <label htmlFor="email" className="text-sm font-medium">
+                Email
+              </label>
               <Input
                 id="email"
                 type="email"
@@ -73,7 +81,9 @@ export default function AdminLoginPage() {
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium">Password</label>
+              <label htmlFor="password" className="text-sm font-medium">
+                Password
+              </label>
               <div className="relative">
                 <Input
                   id="password"
@@ -110,12 +120,8 @@ export default function AdminLoginPage() {
               )}
             </Button>
           </form>
-
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            Demo credentials: admin@sailex.com / admin123
-          </p>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

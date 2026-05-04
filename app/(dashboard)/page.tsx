@@ -140,10 +140,8 @@ export default function AdminDashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-serif font-semibold">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Welcome back! Here&apos;s what&apos;s happening with your store.
-        </p>
+        <h1 className="text-2xl font-serif font-semibold">Admin ashboard</h1>
+        <p className="text-muted-foreground">Welcome back!</p>
       </div>
 
       {/* Stats Grid */}
