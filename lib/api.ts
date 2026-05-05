@@ -1,3 +1,5 @@
+import { DashboardStats } from "@/types/dashboard";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
 // Mock data for when backend is unavailable
@@ -334,7 +336,9 @@ export const adminLogin = async (email: string, password: string) => {
 };
 
 // Dashboard
-export const getDashboardStats = async (token: string) => {
+export const getDashboardStats = async (
+  token: string,
+): Promise<DashboardStats> => {
   try {
     const data = await fetchAPI<any>("/admin/dashboard", { token });
     // Map backend response to frontend expected format
@@ -358,8 +362,16 @@ export const getDashboardStats = async (token: string) => {
       })),
     };
   } catch {
-    // Return mock dashboard stats
-    return mockDashboardStats;
+    return {
+      totalRevenue: mockDashboardStats.totalRevenue,
+      totalOrders: mockDashboardStats.totalOrders,
+      totalProducts: mockDashboardStats.totalProducts,
+      totalCustomers: mockDashboardStats.totalCustomers,
+      revenueChange: mockDashboardStats.revenueGrowth,
+      ordersChange: mockDashboardStats.orderGrowth,
+      recentOrders: mockDashboardStats.recentOrders,
+      lowStockProducts: mockDashboardStats.lowStockProducts,
+    };
   }
 };
 

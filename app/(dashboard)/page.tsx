@@ -22,17 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { getDashboardStats } from "@/lib/api";
 import { formatPrice, formatDate } from "@/lib/utils";
-
-interface DashboardStats {
-  totalRevenue: number;
-  totalOrders: number;
-  totalProducts: number;
-  totalCustomers: number;
-  revenueChange: number;
-  ordersChange: number;
-  recentOrders: any[];
-  lowStockProducts: any[];
-}
+import { DashboardStats } from "@/types/dashboard";
 
 export default function AdminDashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
