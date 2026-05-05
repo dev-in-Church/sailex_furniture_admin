@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getCategories, createProduct } from "@/lib/api";
+import { uploadToCloudinary, isCloudinaryConfigured } from "@/lib/cloudinary";
 
 export default function NewProductPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>(
     [],
   );
@@ -72,9 +74,9 @@ export default function NewProductPage() {
 
       await createProduct(token, {
         ...formData,
-        price: parseFloat(formData.price) * 100, // Convert to cents
+        price: parseFloat(formData.price), // Store as whole KES
         stock_quantity: parseInt(formData.stock_quantity),
-        images,
+        images, // Cloudinary URLs are already proper URLs
       });
 
       router.push("/products");
@@ -86,15 +88,37 @@ export default function NewProductPage() {
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files) return;
+    if (!files || files.length === 0) return;
 
-    // For demo, we'll use placeholder URLs
-    const newImages = Array.from(files).map((file) =>
-      URL.createObjectURL(file),
-    );
-    setImages([...images, ...newImages]);
+    // Check if Cloudinary is configured
+    if (!isCloudinaryConfigured()) {
+      // Fallback to URL prompt
+      const url = prompt(
+        "Cloudinary not configured. Enter image URL manually:",
+      );
+      if (url && url.trim()) {
+        setImages([...images, url.trim()]);
+      }
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const newImages = [...images];
+      for (const file of Array.from(files)) {
+        const result = await uploadToCloudinary(file);
+        newImages.push(result.secure_url);
+      }
+      setImages(newImages);
+    } catch (error) {
+      console.error("Failed to upload image:", error);
+      alert("Failed to upload image. Please try again.");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
   };
 
   const removeImage = (index: number) => {
@@ -322,17 +346,31 @@ export default function NewProductPage() {
                       </button>
                     </div>
                   ))}
-                  <label className="aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors">
-                    <Upload className="h-8 w-8 text-muted-foreground mb-2" />
-                    <span className="text-sm text-muted-foreground">
-                      Add Image
-                    </span>
+                  <label
+                    className={`aspect-square rounded-lg border-2 border-dashed flex flex-col items-center justify-center cursor-pointer hover:border-primary transition-colors ${uploading ? "opacity-50 pointer-events-none" : ""}`}
+                  >
+                    {uploading ? (
+                      <>
+                        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent mb-2" />
+                        <span className="text-sm text-muted-foreground">
+                          Uploading...
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                        <span className="text-sm text-muted-foreground">
+                          Upload Images
+                        </span>
+                      </>
+                    )}
                     <input
                       type="file"
                       accept="image/*"
                       multiple
                       className="hidden"
                       onChange={handleImageUpload}
+                      disabled={uploading}
                     />
                   </label>
                 </div>

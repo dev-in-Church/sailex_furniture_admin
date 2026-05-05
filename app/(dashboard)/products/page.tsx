@@ -195,9 +195,9 @@ export default function AdminProductsPage() {
             </select>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="rounded-lg border overflow-hidden">
-            <table className="w-full">
+        <CardContent className="p-0 sm:p-6">
+          <div className="rounded-lg border overflow-x-auto">
+            <table className="w-full min-w-[700px]">
               <thead className="bg-muted/50">
                 <tr>
                   <th className="text-left p-4 font-medium">Product</th>
@@ -284,7 +284,7 @@ export default function AdminProductsPage() {
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                         {openDropdown === product.id && (
-                          <div className="absolute right-0 top-full mt-1 w-36 rounded-md border bg-popover shadow-lg z-10">
+                          <div className="absolute right-0 bg-white top-full mt-1 w-36 rounded-md border bg-popover shadow-lg z-10">
                             <Link
                               href={`/products/${product.id}`}
                               className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted"
