@@ -1,7 +1,8 @@
 import { DashboardStats } from "@/types/dashboard";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  "https://sailex-furniture-server.onrender.com/api";
 // Mock data for when backend is unavailable
 const mockProducts = [
   {

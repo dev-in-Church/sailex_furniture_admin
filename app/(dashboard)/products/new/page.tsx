@@ -442,7 +442,11 @@ export default function NewProductPage() {
 
             <Card>
               <CardContent className="pt-6">
-                <Button type="submit" className="w-full" disabled={loading}>
+                <Button
+                  type="submit"
+                  className="w-full bg-amber-600 text-white"
+                  disabled={loading}
+                >
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
