@@ -191,7 +191,7 @@ export default function EditProductPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex md:items-center flex-col md:flex-row gap-4 justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
             <Link href="/products">
@@ -203,7 +203,7 @@ export default function EditProductPage() {
             <p className="text-muted-foreground">Update product details</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 justify-center">
           <Button
             variant="outline"
             className="text-red-600 hover:text-red-700 hover:bg-red-50"
@@ -212,7 +212,11 @@ export default function EditProductPage() {
             <Trash2 className="mr-2 h-4 w-4" />
             Delete
           </Button>
-          <Button onClick={handleSubmit} disabled={saving}>
+          <Button
+            onClick={handleSubmit}
+            disabled={saving}
+            className="bg-amber-600 text-white"
+          >
             <Save className="mr-2 h-4 w-4" />
             {saving ? "Saving..." : "Save Changes"}
           </Button>
