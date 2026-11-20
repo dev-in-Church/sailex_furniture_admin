@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import {
   Search,
-  Eye,
   Package,
   Truck,
   CheckCircle,
@@ -17,21 +15,11 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { getOrders, updateOrderStatus } from "@/lib/api";
 import { formatPrice, formatDate } from "@/lib/utils";
-
-interface Order {
-  id: string;
-  order_number: string;
-  customer_name: string;
-  customer_email: string;
-  total: number;
-  status: string;
-  payment_method: string;
-  item_count: number;
-  created_at: string;
-}
+import type { OrderSummary, OrderStatus } from "@/types/api";
 
 const statusIcons: Record<string, any> = {
   pending: Clock,
+  confirmed: CheckCircle,
   processing: Package,
   shipped: Truck,
   delivered: CheckCircle,
@@ -40,6 +28,7 @@ const statusIcons: Record<string, any> = {
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-700",
+  confirmed: "bg-sky-100 text-sky-700",
   processing: "bg-blue-100 text-blue-700",
   shipped: "bg-purple-100 text-purple-700",
   delivered: "bg-green-100 text-green-700",
@@ -47,7 +36,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function AdminOrdersPage() {
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<OrderSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -75,7 +64,7 @@ export default function AdminOrdersPage() {
     fetchData();
   }, [statusFilter, search]);
 
-  const handleStatusUpdate = async (orderId: string, newStatus: string) => {
+  const handleStatusUpdate = async (orderId: string, newStatus: OrderStatus) => {
     try {
       const token = localStorage.getItem("adminToken");
       if (!token) return;
@@ -178,6 +167,7 @@ export default function AdminOrdersPage() {
             >
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
+              <option value="confirmed">Confirmed</option>
               <option value="processing">Processing</option>
               <option value="shipped">Shipped</option>
               <option value="delivered">Delivered</option>
@@ -228,14 +218,16 @@ export default function AdminOrdersPage() {
                         <div>
                           <p className="font-medium">{order.customer_name}</p>
                           <p className="text-sm text-muted-foreground">
-                            {order.customer_email}
+                            {order.email}
                           </p>
                         </div>
                       </td>
                       <td className="px-4 py-3">{order.item_count} items</td>
-                      <td className="px-4 py-3">{formatPrice(order.total)}</td>
+                      <td className="px-4 py-3">
+                        {formatPrice(Number(order.total))}
+                      </td>
                       <td className="px-4 py-3 capitalize">
-                        {order.payment_method}
+                        {order.payment_method ?? "-"}
                       </td>
                       <td className="px-4 py-3">
                         <span

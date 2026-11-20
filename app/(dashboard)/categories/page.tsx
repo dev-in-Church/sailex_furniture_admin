@@ -11,14 +11,7 @@ import {
   updateCategory,
   deleteCategory,
 } from "@/lib/api";
-
-interface Category {
-  id: string;
-  name: string;
-  slug: string;
-  description: string;
-  product_count: number;
-}
+import type { Category } from "@/types/api";
 
 export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -78,15 +71,8 @@ export default function AdminCategoriesPage() {
           ),
         );
       } else {
-        const result = await createCategory(token, formData);
-        setCategories([
-          ...categories,
-          {
-            ...formData,
-            id: result.category?.id || String(Date.now()),
-            product_count: 0,
-          },
-        ]);
+        await createCategory(token, formData);
+        await fetchCategories();
       }
 
       setDialogOpen(false);
@@ -104,7 +90,7 @@ export default function AdminCategoriesPage() {
     setFormData({
       name: category.name,
       slug: category.slug,
-      description: category.description || "",
+      description: category.description ?? "",
     });
     setDialogOpen(true);
   };

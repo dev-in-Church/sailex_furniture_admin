@@ -15,26 +15,24 @@ import {
   getCategories,
 } from "@/lib/api";
 import { uploadToCloudinary, isCloudinaryConfigured } from "@/lib/cloudinary";
+import type { ProductInput, ProductStatus } from "@/types/api";
 
-interface Category {
+interface CategoryOption {
   id: string;
   name: string;
 }
 
-interface ProductData {
-  id: string;
+interface FormState {
   name: string;
   slug: string;
   description: string;
   price: number;
-  original_price: number | null;
+  compare_at_price: number | null;
   images: string[];
   category_id: string;
-  category_name?: string;
   stock_quantity: number;
-  is_featured: boolean;
-  is_active: boolean;
-  status?: string;
+  featured: boolean;
+  status: ProductStatus;
 }
 
 export default function EditProductPage() {
@@ -46,21 +44,20 @@ export default function EditProductPage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const [formData, setFormData] = useState<ProductData>({
-    id: "",
+  const [formData, setFormData] = useState<FormState>({
     name: "",
     slug: "",
     description: "",
     price: 0,
-    original_price: null,
+    compare_at_price: null,
     images: [],
     category_id: "",
     stock_quantity: 0,
-    is_featured: false,
-    is_active: true,
+    featured: false,
+    status: "active",
   });
 
   useEffect(() => {
@@ -72,14 +69,21 @@ export default function EditProductPage() {
           getCategories(token),
         ]);
 
-        if (productData.product) {
+        const p = productData.product;
+        if (p) {
           setFormData({
-            ...productData.product,
-            category_id: productData.product.category_id || "",
-            images: productData.product.images || [],
-            is_active:
-              productData.product.is_active ??
-              productData.product.status === "active",
+            name: p.name,
+            slug: p.slug,
+            description: p.description ?? "",
+            price: Number(p.price),
+            compare_at_price: p.compare_at_price
+              ? Number(p.compare_at_price)
+              : null,
+            images: p.images ?? [],
+            category_id: p.category_id ?? "",
+            stock_quantity: p.stock_quantity,
+            featured: p.featured,
+            status: p.status,
           });
         }
         setCategories(categoriesData.categories || categoriesData.all || []);
@@ -110,11 +114,20 @@ export default function EditProductPage() {
           .replace(/\s+/g, "-")
           .replace(/[^a-z0-9-]/g, "");
 
-      await updateProduct(token, productId, {
-        ...formData,
+      const payload: ProductInput = {
+        name: formData.name,
         slug,
-        original_price: formData.original_price || null,
-      });
+        description: formData.description || null,
+        price: formData.price,
+        compareAtPrice: formData.compare_at_price,
+        stockQuantity: formData.stock_quantity,
+        categoryId: formData.category_id || null,
+        images: formData.images,
+        featured: formData.featured,
+        status: formData.status,
+      };
+
+      await updateProduct(token, productId, payload);
 
       alert("Product updated successfully!");
       router.push("/products");
@@ -390,11 +403,11 @@ export default function EditProductPage() {
                 </label>
                 <Input
                   type="number"
-                  value={formData.original_price || ""}
+                  value={formData.compare_at_price ?? ""}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      original_price: parseFloat(e.target.value) || null,
+                      compare_at_price: parseFloat(e.target.value) || null,
                     })
                   }
                   placeholder="0"
@@ -450,17 +463,18 @@ export default function EditProductPage() {
               <div className="space-y-2">
                 <label className="text-sm font-medium">Product Status</label>
                 <select
-                  value={formData.is_active ? "active" : "draft"}
+                  value={formData.status}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      is_active: e.target.value === "active",
+                      status: e.target.value as ProductStatus,
                     })
                   }
                   className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
                   <option value="active">Active</option>
                   <option value="draft">Draft</option>
+                  <option value="archived">Archived</option>
                 </select>
               </div>
 
@@ -471,16 +485,16 @@ export default function EditProductPage() {
                   onClick={() =>
                     setFormData({
                       ...formData,
-                      is_featured: !formData.is_featured,
+                      featured: !formData.featured,
                     })
                   }
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    formData.is_featured ? "bg-primary" : "bg-input"
+                    formData.featured ? "bg-primary" : "bg-input"
                   }`}
                 >
                   <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      formData.is_featured ? "translate-x-6" : "translate-x-1"
+                      formData.featured ? "translate-x-6" : "translate-x-1"
                     }`}
                   />
                 </button>
@@ -542,9 +556,9 @@ export default function EditProductPage() {
                     {formData.price
                       ? `KES ${formData.price.toLocaleString()}`
                       : "KES 0"}
-                    {formData.original_price && (
+                    {formData.compare_at_price && (
                       <span className="ml-2 line-through text-xs">
-                        KES {formData.original_price.toLocaleString()}
+                        KES {formData.compare_at_price.toLocaleString()}
                       </span>
                     )}
                   </p>

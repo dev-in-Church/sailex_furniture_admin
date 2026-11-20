@@ -1,22 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, User, ShoppingBag, Mail } from "lucide-react";
+import { Search, User, ShoppingBag } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { getCustomers } from "@/lib/api";
 import { formatPrice, formatDate } from "@/lib/utils";
-
-interface Customer {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  order_count: number;
-  total_spent: number;
-  created_at: string;
-  last_order_at: string | null;
-}
+import type { Customer } from "@/types/api";
 
 export default function AdminCustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -45,7 +35,10 @@ export default function AdminCustomersPage() {
   }, [search]);
 
   const totalCustomers = customers.length;
-  const totalRevenue = customers.reduce((acc, c) => acc + c.total_spent, 0);
+  const totalRevenue = customers.reduce(
+    (acc, c) => acc + Number(c.total_spent),
+    0,
+  );
   const totalOrders = customers.reduce((acc, c) => acc + c.order_count, 0);
   const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
@@ -168,10 +161,10 @@ export default function AdminCustomersPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3">{customer.phone}</td>
+                    <td className="px-4 py-3">{customer.phone ?? "-"}</td>
                     <td className="px-4 py-3">{customer.order_count}</td>
                     <td className="px-4 py-3 font-medium">
-                      {formatPrice(customer.total_spent)}
+                      {formatPrice(Number(customer.total_spent))}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
                       {formatDate(customer.created_at)}
