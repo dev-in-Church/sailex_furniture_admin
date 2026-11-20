@@ -1,23 +1,32 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
+import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard,
-  Package,
-  ShoppingCart,
-  Users,
   BarChart3,
-  Settings,
-  Tag,
+  ExternalLink,
+  LayoutDashboard,
   LogOut,
   Menu,
+  Package,
+  Settings,
+  ShoppingCart,
+  Tag,
+  Users,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  SESSION_EXPIRED_EVENT,
+  clearSession,
+  getToken,
+  getUser,
+  hasActiveSession,
+} from "@/lib/session";
+import type { AdminUser } from "@/types/api";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -29,107 +38,166 @@ const navigation = [
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
-const STORE_URL = process.env.NEXT_PUBLIC_STORE_URL || "http://localhost:3000";
+// The "View Store" link only shows when the store's address is configured
+const STORE_URL = process.env.NEXT_PUBLIC_STORE_URL;
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+const isActive = (pathname: string, href: string) =>
+  href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+
+export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [adminUser, setAdminUser] = useState<{
-    name: string;
-    email: string;
-  } | null>(null);
+  const [isDesktop, setIsDesktop] = useState(true);
+  const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
 
+  const goToLogin = useCallback(
+    (expired: boolean) => {
+      const params = new URLSearchParams();
+      if (expired) params.set("expired", "1");
+      if (pathname && pathname !== "/") params.set("next", pathname);
+      const query = params.toString();
+      router.replace(query ? `/login?${query}` : "/login");
+    },
+    [router, pathname],
+  );
+
+  // Check the session on load and on every navigation
   useEffect(() => {
-    // Check admin authentication
-    const token = localStorage.getItem("adminToken");
-    const user = localStorage.getItem("adminUser");
-
-    if (!token || !user) {
-      router.push("/login");
+    if (!hasActiveSession()) {
+      const hadToken = Boolean(getToken());
+      clearSession();
+      goToLogin(hadToken);
       return;
     }
+    setAdminUser(getUser());
+  }, [goToLogin]);
 
-    try {
-      setAdminUser(JSON.parse(user));
-    } catch {
-      router.push("/login");
-    }
-  }, [router]);
+  // The server rejected the token, or the admin signed out in another tab
+  useEffect(() => {
+    const onExpired = () => goToLogin(true);
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === "adminToken" && !event.newValue) goToLogin(false);
+    };
+
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, [goToLogin]);
+
+  // Knowing the screen size lets the closed mobile menu be skipped by keyboard users
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 1024px)");
+    const update = () => setIsDesktop(query.matches);
+    update();
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+
+  // Close the menu when the page changes
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
+
+  // While the mobile menu is open: lock page scroll and let Escape close it
+  useEffect(() => {
+    if (!sidebarOpen) return;
+    document.body.style.overflow = "hidden";
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSidebarOpen(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = "";
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [sidebarOpen]);
 
   const handleLogout = () => {
-    localStorage.removeItem("adminToken");
-    localStorage.removeItem("adminUser");
-    router.push("/login");
+    clearSession();
+    router.replace("/login");
   };
 
   if (!adminUser) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-muted">
-        <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto"></div>
+        <div className="text-center" role="status">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
           <p className="mt-4 text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
   }
 
+  const currentPage = navigation.find((item) => isActive(pathname, item.href))?.name;
+
   return (
     <div className="flex min-h-screen bg-muted/30">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:shadow"
+      >
+        Skip to content
+      </a>
+
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/50 lg:hidden"
           onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
         />
       )}
 
       {/* Sidebar */}
       <aside
+        id="admin-sidebar"
+        inert={!isDesktop && !sidebarOpen}
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 bg-white border-r transform transition-transform duration-200 lg:translate-x-0 lg:static",
+          "fixed inset-y-0 left-0 z-50 w-64 transform border-r bg-white transition-transform duration-200 lg:static lg:translate-x-0",
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         <div className="flex h-full flex-col">
-          {/* Logo */}
-          <div className="flex h-16 items-center justify-between px-4 border-b">
+          <div className="flex h-16 items-center justify-between border-b px-4">
             <Link href="/" className="flex items-center gap-2">
-              <img src="/logo.png" alt="" className="h-10" />
-
-              <span className="font-serif font-semibold text-lg">Admin</span>
+              <Image
+                src="/logo.png"
+                alt=""
+                width={40}
+                height={40}
+                className="h-10 w-auto"
+              />
+              <span className="font-serif text-lg font-semibold">Admin</span>
             </Link>
             <Button
               variant="ghost"
               size="icon"
               className="lg:hidden"
               onClick={() => setSidebarOpen(false)}
+              aria-label="Close menu"
             >
               <X className="h-5 w-5" />
             </Button>
           </div>
 
-          {/* Navigation */}
-          <nav className="flex-1 space-y-1 p-4">
+          <nav className="flex-1 space-y-1 overflow-y-auto p-4" aria-label="Admin">
             {navigation.map((item) => {
-              const isActive =
-                pathname === item.href ||
-                (item.href !== "/" && pathname.startsWith(item.href));
+              const active = isActive(pathname, item.href);
               return (
                 <Link
                   key={item.name}
                   href={item.href}
+                  aria-current={active ? "page" : undefined}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-                    isActive
+                    active
                       ? "bg-primary text-primary-foreground"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
-                  onClick={() => setSidebarOpen(false)}
                 >
                   <item.icon className="h-5 w-5" />
                   {item.name}
@@ -138,21 +206,25 @@ export default function DashboardLayout({
             })}
           </nav>
 
-          {/* User section */}
           <div className="border-t p-4">
             <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10">
                 <span className="text-sm font-semibold text-primary">
-                  {adminUser.name.charAt(0).toUpperCase()}
+                  {adminUser.name?.charAt(0).toUpperCase() || "A"}
                 </span>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{adminUser.name}</p>
-                <p className="text-xs text-muted-foreground truncate">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{adminUser.name}</p>
+                <p className="truncate text-xs text-muted-foreground">
                   {adminUser.email}
                 </p>
               </div>
-              <Button variant="ghost" size="icon" onClick={handleLogout}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleLogout}
+                aria-label="Sign out"
+              >
                 <LogOut className="h-4 w-4" />
               </Button>
             </div>
@@ -161,30 +233,44 @@ export default function DashboardLayout({
       </aside>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Top bar */}
-        <header className="h-16 border-b bg-card flex items-center px-4 gap-4">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex h-16 items-center gap-4 border-b bg-card px-4">
           <Button
             variant="ghost"
             size="icon"
             className="lg:hidden"
             onClick={() => setSidebarOpen(true)}
+            aria-label="Open menu"
+            aria-expanded={sidebarOpen}
+            aria-controls="admin-sidebar"
           >
             <Menu className="h-5 w-5" />
           </Button>
+
+          {currentPage && (
+            <p className="text-sm font-medium text-foreground lg:hidden">
+              {currentPage}
+            </p>
+          )}
+
           <div className="flex-1" />
-          <a
-            href={STORE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-sm text-muted-foreground hover:text-foreground"
-          >
-            View Store
-          </a>
+
+          {STORE_URL && (
+            <a
+              href={STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+            >
+              View Store
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+            </a>
+          )}
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 p-4 lg:p-6 overflow-auto">{children}</main>
+        <main id="main-content" className="flex-1 overflow-auto p-4 lg:p-6">
+          {children}
+        </main>
       </div>
     </div>
   );
