@@ -41,6 +41,15 @@ export interface Product {
   updated_at: string;
 }
 
+/** Totals for the product status tabs (not affected by the current search or filters). */
+export interface ProductCounts {
+  total: number;
+  active: number;
+  draft: number;
+  archived: number;
+  lowStock: number;
+}
+
 /** What the server accepts. Send only the fields you want to change; null clears optional ones. */
 export interface ProductInput {
   name?: string;

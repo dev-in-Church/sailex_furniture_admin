@@ -9,6 +9,7 @@ import type {
   OrderSummary,
   Pagination,
   Product,
+  ProductCounts,
   ProductInput,
 } from "@/types/api";
 import type { DashboardStats } from "@/types/dashboard";
@@ -227,7 +228,7 @@ export const getDashboardStats = async (token: string): Promise<DashboardStats> 
 /* -------------------------------- products -------------------------------- */
 
 export const getProducts = (token: string, params?: QueryParams) =>
-  request<{ products: Product[]; pagination: Pagination }>(
+  request<{ products: Product[]; pagination: Pagination; counts: ProductCounts }>(
     `/admin/products${toQuery(params)}`,
     { token },
   );
